@@ -7,7 +7,13 @@ var Xrm;
             FilterTypes[FilterTypes["Or"] = 1] = "Or";
         })(oData.FilterTypes || (oData.FilterTypes = {}));
         var FilterTypes = oData.FilterTypes;
-
+    })(oData = Xrm.oData || (Xrm.oData = {}));
+})(Xrm || (Xrm = {}));
+/// <reference path="Xrm.oData.FilterTypes.ts" />
+var Xrm;
+(function (Xrm) {
+    var oData;
+    (function (oData) {
         var FilterInfo = (function () {
             function FilterInfo(init) {
                 this.filterType = Xrm.oData.FilterTypes.And;
@@ -66,13 +72,24 @@ var Xrm;
             return FilterInfo;
         })();
         oData.FilterInfo = FilterInfo;
-
+    })(oData = Xrm.oData || (Xrm.oData = {}));
+})(Xrm || (Xrm = {}));
+var Xrm;
+(function (Xrm) {
+    var oData;
+    (function (oData) {
         (function (OrderTypes) {
             OrderTypes[OrderTypes["Asc"] = 0] = "Asc";
             OrderTypes[OrderTypes["Desc"] = 1] = "Desc";
         })(oData.OrderTypes || (oData.OrderTypes = {}));
         var OrderTypes = oData.OrderTypes;
-
+    })(oData = Xrm.oData || (Xrm.oData = {}));
+})(Xrm || (Xrm = {}));
+/// <reference path="Xrm.oData.OrderTypes.ts" />
+var Xrm;
+(function (Xrm) {
+    var oData;
+    (function (oData) {
         var OrderColumn = (function () {
             function OrderColumn(init) {
                 this.column = '';
@@ -86,7 +103,14 @@ var Xrm;
             return OrderColumn;
         })();
         oData.OrderColumn = OrderColumn;
-
+    })(oData = Xrm.oData || (Xrm.oData = {}));
+})(Xrm || (Xrm = {}));
+/// <reference path="Xrm.oData.FilterInfo.ts" />
+/// <reference path="Xrm.oData.OrderColumn.ts" />
+var Xrm;
+(function (Xrm) {
+    var oData;
+    (function (oData) {
         var QueryBuilder = (function () {
             function QueryBuilder(_url) {
                 /// <summary>Создает новый экземпляр объекта.</summary>
@@ -147,11 +171,23 @@ var Xrm;
             };
             QueryBuilder.prototype.toString = function () {
                 /// <summary>Возвращает строку запроса из полученных данных.</summary>
+                var urlPart = this.getQueryUrlPart();
+                var queryFiltersPart = this.getQueryFiltersPart();
+                var result = urlPart + ((queryFiltersPart !== '') ? '?' + queryFiltersPart : queryFiltersPart);
+                return result;
+            };
+            QueryBuilder.prototype.getQueryUrlPart = function () {
+                /// <summary>Генерирует и возвращает Url для запроса.</summary>
                 if (!this._url || !this._entityName) {
                     throw new Error('Не задан URL или имя сущности.');
                 }
-                var result = this._url;
-                result = result.concat(result[result.length - 1] == '/' ? '' : '/', this._entityName, '?');
+                var url = this._url;
+                url = url.concat(url[url.length - 1] == '/' ? '' : '/', this._entityName);
+                return url;
+            };
+            QueryBuilder.prototype.getQueryFiltersPart = function () {
+                /// <summary>Генерирует и возвращает фильтры для запроса в формате "ключ=значение".</summary>
+                var result = '';
                 if (this._columns && (this._columns.length > 0)) {
                     result = this.concatRequestPart(result, '$select=' + this._columns.join(','));
                 }
@@ -186,18 +222,21 @@ var Xrm;
                 var req = new XMLHttpRequest();
                 req.open("GET", this.toString(), true);
                 req.setRequestHeader("Accept", "application/json");
-                req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
                 req.onreadystatechange = function () {
                     var createAccountReq = this;
-                    if (createAccountReq.readyState == 4 /* complete */) {
-                        createAccountReq.onreadystatechange = null; //avoids memory leaks
-                        if (createAccountReq.status == 201) {
-                            //Success
-                            successCallback(JSON.parse(createAccountReq.responseText).d);
+                    if (createAccountReq.readyState == 4) {
+                        createAccountReq.onreadystatechange = null;
+                        if (createAccountReq.status == 200) {
+                            if (successCallback) {
+                                var data = JSON.parse(createAccountReq.responseText);
+                                data = data.d || data;
+                                successCallback(data);
+                            }
                         }
                         else {
-                            //Failure
-                            errorCallback(createAccountReq);
+                            if (errorCallback) {
+                                errorCallback(createAccountReq);
+                            }
                         }
                     }
                 };
@@ -207,8 +246,9 @@ var Xrm;
                 /// <summary>Склеивает части запроса.</summary>
                 /// <param name="request" type="string">Запрос.</param>
                 /// <param name="part" type="string">Часть запроса для склеивания.</param>
-                if (part && request) {
-                    if (request.indexOf('?') !== (request.length - 1)) {
+                request = request || '';
+                if (part) {
+                    if (request.length > 0) {
                         request = request.concat('&');
                     }
                     request = request.concat(part);

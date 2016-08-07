@@ -94,13 +94,29 @@ namespace Xrm.oData {
         public toString(): string {
             /// <summary>Возвращает строку запроса из полученных данных.</summary>
 
+            var urlPart: string = this.getQueryUrlPart(); 
+            var queryFiltersPart: string = this.getQueryFiltersPart();
+
+            var result: string = urlPart + ((queryFiltersPart !== '') ? '?' + queryFiltersPart : queryFiltersPart);
+            return result;
+        }
+
+        private getQueryUrlPart(): string {
+            /// <summary>Генерирует и возвращает Url для запроса.</summary>
+
             if (!this._url || !this._entityName) {
                 throw new Error('Не задан URL или имя сущности.');
             }
 
-            var result: string = this._url;
-            result = result.concat(result[result.length - 1] == '/' ? '' : '/', this._entityName, '?');
+            var url: string = this._url;
+            url = url.concat(url[url.length - 1] == '/' ? '' : '/', this._entityName);
+            return url;
+        }
 
+        private getQueryFiltersPart(): string {
+            /// <summary>Генерирует и возвращает фильтры для запроса в формате "ключ=значение".</summary>
+
+            var result: string = '';
             if (this._columns && (this._columns.length > 0)) {
                 result = this.concatRequestPart(result, '$select=' + this._columns.join(','));
             }
@@ -146,18 +162,21 @@ namespace Xrm.oData {
             var req = new XMLHttpRequest();
             req.open("GET", this.toString(), true);
             req.setRequestHeader("Accept", "application/json");
-            req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
             req.onreadystatechange = function () {
                 var createAccountReq = this;
-                if (createAccountReq.readyState == 4 /* complete */) {
-                    createAccountReq.onreadystatechange = null; //avoids memory leaks
-                    if (createAccountReq.status == 201) {
-                        //Success
-                        successCallback(JSON.parse(createAccountReq.responseText).d);
+                if (createAccountReq.readyState == 4) {
+                    createAccountReq.onreadystatechange = null;
+                    if (createAccountReq.status == 200) {
+                        if (successCallback) {
+                            var data = JSON.parse(createAccountReq.responseText);
+                            data = data.d || data;
+                            successCallback(data);
+                        }
                     }
                     else {
-                        //Failure
-                        errorCallback(createAccountReq);
+                        if (errorCallback) {
+                            errorCallback(createAccountReq);
+                        }
                     }
                 }
             };
@@ -168,9 +187,10 @@ namespace Xrm.oData {
             /// <summary>Склеивает части запроса.</summary>
             /// <param name="request" type="string">Запрос.</param>
             /// <param name="part" type="string">Часть запроса для склеивания.</param>
-
-            if (part && request) {
-                if (request.indexOf('?') !== (request.length - 1)) {
+            
+            request = request || '';
+            if (part) {
+                if (request.length > 0) {
                     request = request.concat('&');
                 }
 
